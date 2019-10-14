@@ -33,6 +33,67 @@ app.post('/api/exercise/new-user', (req, res) => {
 });
 
 
+/** Retrieve the list of all users */
+app.get('/api/exercise/users', (req, res) => {
+  UserLog.find({}).select({
+    "_id": 1,
+    "username": 1,
+    "__v": 1
+  }).exec((err, docs) => {
+    if (err) {
+      res.send('Something went wrong, please try again later.');
+    }
+    res.json(docs);
+  });
+});
+
+
+/** Add exercise to a user */
+app.post('/api/exercise/add', (req, res) => {
+  const userId = req.body.userId;
+  if (!userId) {
+    sendEmptyInputFieldError('userId', res);
+    return;
+  }
+  const description = req.body.description;
+  if (!description) {
+    sendEmptyInputFieldError('description', res);
+    return;
+  }
+  const duration = req.body.duration;
+  if (!duration) {
+    sendEmptyInputFieldError('duration', res);
+    return;
+  }
+  if (!Number.isInteger(Number(duration))) {
+    res.send('Error, duration must be an integer!');
+    return;
+  }
+  const date = req.body.date ? new Date(req.body.date) : new Date();
+  if (!date instanceof Date) {
+    res.send('Error, invalid date provided!');
+    return;
+  }
+
+  const filter = { _id: userId };
+
+  const log = {
+    description,
+    duration,
+    date
+  };
+
+  const update = { $push: { log } };
+
+  const updateOptions = { new: true };
+
+  UserLog.findOneAndUpdate(filter, update, updateOptions).exec((err, doc) => {
+    res.json(doc);
+  });
+
+});
+
+
 app.get('/', (req, res) => {
   res.sendFile(__dirname + '/views/index.html')
 });
@@ -67,3 +128,7 @@ app.use((err, req, res, next) => {
 const listener = app.listen(process.env.PORT || 3000, () => {
   console.log('Your app is listening on port ' + listener.address().port)
 });
+
+function sendEmptyInputFieldError(fieldName, res) {
+  res.send(`Error, ${fieldName} field cannot be empty!`);
+}
