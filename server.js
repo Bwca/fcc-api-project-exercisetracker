@@ -1,21 +1,38 @@
 require('dotenv').config();
 
 const express = require('express');
-const app = express();
 const bodyParser = require('body-parser');
-
 const cors = require('cors');
-
 const mongoose = require('mongoose');
-mongoose.connect(process.env.MLAB_URI || 'mongodb://localhost/exercise-track', { useMongoClient: true });
+
+const UserLog = require('./user-log.model');
+
+const app = express();
+const mongoErrorResponses = new Map([[11000, 'Error! Username already exists.']]);
+mongoose.connect(process.env.MLAB_URI, { useMongoClient: true });
+mongoose.Promise = global.Promise;
 
 app.use(cors());
-
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
-
-
 app.use(express.static('public'));
+
+/** Create new user log */
+app.post('/api/exercise/new-user', (req, res) => {
+  const user = new UserLog({
+    username: req.body.username
+  });
+
+  user.save((err, doc) => {
+    if (err) {
+      res.send(mongoErrorResponses.get(err.code));
+      return;
+    }
+    res.json(doc);
+  });
+});
+
+
 app.get('/', (req, res) => {
   res.sendFile(__dirname + '/views/index.html')
 });
