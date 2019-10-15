@@ -72,14 +72,31 @@ app.get('/api/exercise/log', (req, res) => {
 
   UserLog.findById(userId, selectFields).exec((err, doc) => {
 
-    if(err){
+    if (err) {
+      res.json(err);
       res.send('Error! Something has gone wrong');
       return;
     }
 
-    const displayLog = doc.log.map(i => ({ description: i.description, duration: i.duration, date: getDisplayDateString(i.date) }));
+    if (!doc) {
+      res.send('Error! Username not found!');
+      return;
+    }
 
-    res.json({ _id: doc._id, username: doc.username, count: displayLog.length, log: displayLog });
+    const responseLog = doc.log
+      .filter(i => fromDate ? i.date >= fromDate : true)
+      .filter(i => toDate ? i.date <= toDate : true)
+      .map(i => ({
+        description: i.description,
+        duration: i.duration,
+        date: getDisplayDateString(i.date)
+      }));
+
+
+    res.json({
+      _id: doc._id, username: doc.username, count: responseLog.length, log: responseLog
+    });
+
   });
 
 });
@@ -88,7 +105,8 @@ app.get('/api/exercise/log', (req, res) => {
 /** Create new user log */
 app.post('/api/exercise/new-user', (req, res) => {
   const user = new UserLog({
-    username: req.body.username
+    username: req.body.username,
+    log: []
   });
 
   user.save((err, doc) => {
@@ -214,7 +232,6 @@ function convertFilterStringDateToDateObject(dateString) {
 
 
 function getDisplayDateString(date) {
-  /** Thu Dec 13 1990 */
 
   const days = new Map([[0, 'Sun'], [1, 'Mon'], [2, 'Tue'], [3, 'Wed'], [4, 'Thu'], [5, 'Fri'], [6, 'Sat']]);
   const months = new Map([[0, 'Jan'], [1, 'Feb'], [2, 'Mar'], [3, 'Apr'], [4, 'May'], [5, 'Jun'], [6, 'Jul'], [7, 'Aug'], [8, 'Sep'], [9, 'Oct'], [10, 'Nov'], [11, 'Dec']]);
